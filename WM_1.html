@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obliques | EcoFlow Fixed</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --brand: #0ea5e9;
+            --glass: rgba(15, 23, 42, 0.85);
+            --card-border: rgba(255, 255, 255, 0.15);
+            --success: #10b981;
+        }
+
+        #bg-slider {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2;
+            background-size: cover;
+            background-position: center;
+            transition: background-image 4s ease-in-out;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%);
+        }
+
+        body {
+            margin: 0; padding: 20px;
+            font-family: 'Inter', sans-serif;
+            color: white;
+            display: flex; justify-content: center;
+        }
+
+        .container { width: 100%; max-width: 1200px; }
+
+        header {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 30px;
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 20px;
+        }
+
+        .btn-connect {
+            background: var(--brand);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.8fr 1fr;
+            gap: 25px;
+        }
+
+        .card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 25px;
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.05);
+            padding: 25px;
+            border-radius: 20px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .stat-box .value { font-size: 3.2rem; font-weight: 800; color: white; margin: 5px 0; }
+
+        .activity-log { height: 380px; overflow-y: auto; padding-right: 10px; }
+        .log-entry {
+            background: rgba(255,255,255,0.03);
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+            border-left: 4px solid var(--brand);
+        }
+
+        canvas { width: 100% !important; height: 280px !important; }
+    </style>
+</head>
+<body>
+
+<div id="bg-slider"></div>
+<div class="overlay"></div>
+
+<div class="container">
+    <header>
+        <div class="brand-text">
+            <h1>OBLIQUES <span style="font-weight: 300; color: var(--brand);">EcoFlow</span></h1>
+            <p>Sustainability Hub & Leak Detection</p>
+        </div>
+        <button id="connectBtn" class="btn-connect">
+            <i data-lucide="bluetooth"></i> ESTABLISH SYSTEM LINK
+        </button>
+    </header>
+
+    <div class="dashboard-grid">
+        <div class="left-col">
+            <div class="card">
+                <canvas id="flowChart"></canvas>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px;">
+                    <div class="stat-box">
+                        <div style="color: #94a3b8; font-size: 0.8rem;">FLOW RATE</div>
+                        <div class="value" id="f-val">0.0</div>
+                        <div style="font-size: 0.7rem; color: #64748b;">L/MIN</div>
+                    </div>
+                    <div class="stat-box">
+                        <div style="color: #94a3b8; font-size: 0.8rem;">TANK LEVEL</div>
+                        <div class="value" id="t-val">0%</div>
+                        <div style="font-size: 0.7rem; color: #64748b;">CAPACITY</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-col">
+            <div class="card">
+                <div style="font-weight:600; margin-bottom:15px; color:#94a3b8;">SYSTEM LOG</div>
+                <div class="activity-log" id="log"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    lucide.createIcons();
+
+    // Backgrounds
+    const images = [
+        'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1920&q=80',
+        'https://images.unsplash.com/photo-1527489377706-5bf97e608852?auto=format&fit=crop&w=1920&q=80'
+    ];
+    let imgIdx = 0;
+    setInterval(() => {
+        document.getElementById('bg-slider').style.backgroundImage = `url('${images[imgIdx]}')`;
+        imgIdx = (imgIdx + 1) % images.length;
+    }, 12000);
+    document.getElementById('bg-slider').style.backgroundImage = `url('${images[0]}')`;
+
+    // Chart
+    const ctx = document.getElementById('flowChart').getContext('2d');
+    const flowChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array(20).fill(''),
+            datasets: [{
+                data: Array(20).fill(0),
+                borderColor: '#0ea5e9',
+                backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                fill: true, tension: 0.4, pointRadius: 0
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: { 
+                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+                x: { display: false }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    let port, buffer = "";
+    document.getElementById('connectBtn').onclick = async () => {
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 9600 });
+        readData();
+    };
+
+    async function readData() {
+        const decoder = new TextDecoderStream();
+        port.readable.pipeTo(decoder.writable);
+        const reader = decoder.readable.getReader();
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += value;
+            if (buffer.includes('\n')) {
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+                lines.forEach(parseLine);
+            }
+        }
+    }
+
+    function parseLine(line) {
+        const clean = line.trim();
+        if (!clean) return;
+
+        // Log entry
+        const log = document.getElementById('log');
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerText = clean;
+        log.prepend(entry);
+        if (log.children.length > 10) log.lastElementChild.remove();
+
+        // --- THE FIX ---
+        // 1. Find Flow value (Looks for "Flow: X.XX")
+        const flowMatch = clean.match(/Flow:\s*([\d.]+)/i);
+        if (flowMatch) {
+            const val = parseFloat(flowMatch[1]);
+            document.getElementById('f-val').innerText = val.toFixed(1);
+            flowChart.data.datasets[0].data.push(val);
+            flowChart.data.datasets[0].data.shift();
+            flowChart.update('none');
+        }
+
+        // 2. Find Water value (Looks for "Water: XX")
+        const waterMatch = clean.match(/Water:\s*([\d.]+)/i);
+        if (waterMatch) {
+            const val = parseFloat(waterMatch[1]);
+            document.getElementById('t-val').innerText = Math.round(val) + "%";
+        }
+    }
+</script>
+</body>
+</html>
